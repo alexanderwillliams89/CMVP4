@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stable Pose Camera</title>
+
+<style>
+body {
+    margin: 0;
+    overflow: hidden;
+    background: black;
+    font-family: Arial;
+}
+
+video {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+}
+
+#overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 70%;
+    height: 80%;
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.ui {
+    position: absolute;
+    bottom: 20px;
+    width: 100%;
+    text-align: center;
+}
+
+button {
+    padding: 10px;
+    margin: 5px;
+    border-radius: 20px;
+    border: 1px solid white;
+    background: rgba(255,255,255,0.2);
+    color: white;
+}
+
+#uploadBox {
+    display: none;
+    margin-top: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<video id="video" autoplay playsinline></video>
+
+<!-- FIXED SVG (STATIC) -->
+<div id="overlay">
+<svg viewBox="0 0 200 400">
+<circle cx="100" cy="60" r="18" stroke="silver" fill="none"/>
+<path d="M100 80 L100 210" stroke="silver"/>
+<path d="M60 120 L140 120" stroke="silver"/>
+<path d="M60 120 L35 180" stroke="silver"/>
+<path d="M140 120 L165 180" stroke="silver"/>
+<path d="M100 210 L80 330" stroke="silver"/>
+<path d="M100 210 L120 330" stroke="silver"/>
+</svg>
+</div>
+
+<!-- UI -->
+<div class="ui">
+
+<button onclick="switchCamera()">Switch Camera</button>
+<button onclick="takePhoto()">📸 Capture</button>
+<button onclick="creatorLogin()">Creator Mode</button>
+
+<br>
+
+<div id="uploadBox">
+<input type="file" accept="image/*" onchange="uploadPose(event)">
+</div>
+
+</div>
+
+<script>
+const video = document.getElementById("video");
+
+let stream;
+let frontCamera = true;
+let isCreator = false;
+
+---
+
+# 🔧 CAMERA (FIXED)
+
+async function startCamera() {
+    try {
+        if (stream) {
+            stream.getTracks().forEach(t => t.stop());
+        }
+
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: frontCamera ? "user" : "environment" }
+        });
+
+        video.srcObject = stream;
+
+    } catch (err) {
+        alert("Camera error: " + err.message);
+    }
+}
+
+function switchCamera() {
+    frontCamera = !frontCamera;
+    startCamera();
+}
+
+---
+
+# 📸 TAKE PHOTO (FIXED)
+
+function takePhoto() {
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext("2d");
+
+    // mirror fix
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+
+    ctx.drawImage(video, 0, 0);
+
+    const img = canvas.toDataURL("image/png");
+
+    const a = document.createElement("a");
+    a.href = img;
+    a.download = "photo.png";
+    a.click();
+}
+
+---
+
+# 🔐 CREATOR MODE
+
+function creatorLogin() {
+    let pass = prompt("Enter creator password:");
+
+    if (pass === "1234") {
+        isCreator = true;
+        document.getElementById("uploadBox").style.display = "block";
+        alert("Creator Mode ON");
+    } else {
+        alert("Wrong password");
+    }
+}
+
+---
+
+# 📤 UPLOAD (LOCKED)
+
+function uploadPose(event) {
+
+    if (!isCreator) {
+        alert("Creator mode required");
+        return;
+    }
+
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+        document.getElementById("overlay").innerHTML =
+        `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:contain;opacity:0.5;">`;
+    };
+
+    reader.readAsDataURL(file);
+}
+
+---
+
+# 🚀 START CAMERA
+
+startCamera();
+</script>
+
+</body>
+</html>
